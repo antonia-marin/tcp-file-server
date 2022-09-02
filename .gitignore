@@ -1,3 +1,6 @@
+# Ignore all
+*
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
