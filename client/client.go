@@ -14,42 +14,57 @@ type client struct {
 	channel string
 }
 
-func (c *client) readInput() {
+func readInput() ([]string, *string) {
+	reader := bufio.NewReader(os.Stdin)
+	line, err := reader.ReadString('\n')
+
+	if err != nil {
+		log.Fatalf("Error: %s", err.Error())
+		return nil, nil
+	}
+
+	msg := strings.Trim(line, "\r\n")
+	args := strings.Split(msg, " ")
+	cmd := strings.TrimSpace(args[0])
+
+	return args, &cmd
+}
+
+func (c *client) handleInput() {
 	for {
-		reader := bufio.NewReader(os.Stdin)
-		line, err := reader.ReadString('\n')
+		args, cmd := readInput()
+		var bytesRequest []byte
 
-		if err != nil {
-			log.Fatalf("Error: %s", err.Error())
-			return
-		}
-
-		msg := strings.Trim(line, "\r\n")
-		args := strings.Split(msg, " ")
-		cmd := strings.TrimSpace(args[0])
-
-		switch cmd {
+		switch *cmd {
 		case "/subscribe":
-			c.subscribe(args)
+			bytesRequest = c.buildSubscribePayload(args)
 		case "/channels":
-			c.channels()
+			bytesRequest = buildChannelsPayload()
 		case "/send":
-			c.send(args)
+			bytesRequest = c.buildSendPayload(args)
 		case "/quit":
-			c.quit()
+			bytesRequest = buildQuitPayload()
 		default:
-			fmt.Println("Error Command not found: ", cmd)
+			fmt.Println("Error Command not found: ", *cmd)
 		}
+
+		c.request(bytesRequest)
 	}
 }
 
-func (c *client) subscribe(arguments []string) {}
+func (c *client) buildSubscribePayload(arguments []string) []byte { return nil }
 
-func (c *client) channels() {}
+func buildChannelsPayload() []byte { return nil }
 
-func (c *client) send(arguments []string) {}
+func (c *client) buildSendPayload(arguments []string) []byte { return nil }
 
-func (c *client) quit() {}
+func buildQuitPayload() []byte { return nil }
+
+func (c *client) request(request []byte) {
+	if request != nil && len(request) > 0 {
+		c.conn.Write(request)
+	}
+}
 
 func main() {
 	conn, err := net.Dial("tcp", ":9999")
@@ -63,5 +78,5 @@ func main() {
 		conn: conn,
 	}
 
-	c.readInput()
+	c.handleInput()
 }
