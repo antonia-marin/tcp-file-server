@@ -102,6 +102,14 @@ func (s *server) sendChannels(responseByte []byte, c net.Conn) {
 	}
 }
 
+func (s *server) quitCurrentChannel(channelName string, c net.Conn) {
+	channel := s.channels[channelName]
+	if channel != nil {
+		delete(channel.members, c.RemoteAddr().String())
+		channel.messageBroadcast(c, fmt.Sprintf("A client has left the channel %s", channelName), s)
+	}
+}
+
 func main() {
 	ln, err := net.Listen("tcp", ":9999")
 	if err != nil {
