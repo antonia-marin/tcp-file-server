@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 )
 
 type server struct {
@@ -48,13 +49,25 @@ func bytesParse(b []byte) (string, string, string, []byte) {
 	return cmd, channel, args, content
 }
 
-func (s *server) subscribe(c net.Conn, chanN string, arg string) {}
+func (s *server) subscribe(c net.Conn, cName string, arg string) {}
 
-func (s *server) listChannels(c net.Conn) {}
+func (s *server) listChannels(c net.Conn) {
+	var channels []string
+	for name := range s.channels {
+		channels = append(channels, name)
+	}
+
+	s.msg(fmt.Sprintf("Available channels are: %s", strings.Join(channels, ", ")), c)
+}
 
 func (s *server) send(c net.Conn, chann string, arg string, cont []byte) {}
 
-func (s *server) quit(c net.Conn, arg string) {}
+func (s *server) quit(c net.Conn, arg string) {
+	log.Printf("Client has disconnected: %s", c.RemoteAddr().String())
+
+	go s.msg("Sad to see you go :(", c)
+	c.Close()
+}
 
 func (s *server) msg(msg string, c net.Conn) {
 	contenTypeBytes := make([]byte, 16)
