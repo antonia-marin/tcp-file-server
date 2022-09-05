@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"net"
 )
@@ -54,6 +55,39 @@ func (s *server) listChannels(c net.Conn) {}
 func (s *server) send(c net.Conn, chann string, arg string, cont []byte) {}
 
 func (s *server) quit(c net.Conn, arg string) {}
+
+func (s *server) msg(msg string, c net.Conn) {
+	contenTypeBytes := make([]byte, 16)
+	copy(contenTypeBytes, "message")
+
+	extByte := make([]byte, 64)
+	requestByte := append(contenTypeBytes, extByte...)
+
+	msgBytes := make([]byte, 2048)
+	copy(msgBytes, msg)
+	requestByte = append(requestByte, msgBytes...)
+
+	s.sendChannels(requestByte, c)
+}
+
+func (s *server) file(fileN string, cont []byte, c net.Conn) {
+	contenTypeBytes := make([]byte, 16)
+	copy(contenTypeBytes, "file")
+
+	fileNameBytes := make([]byte, 64)
+	copy(fileNameBytes, fileN)
+	requestByte := append(contenTypeBytes, fileNameBytes...)
+	requestByte = append(requestByte, cont...)
+
+	s.sendChannels(requestByte, c)
+}
+
+func (s *server) sendChannels(responseByte []byte, c net.Conn) {
+	_, err := c.Write(responseByte)
+	if err != nil {
+		fmt.Println("Server: failed to send content to client!")
+	}
+}
 
 func main() {
 	ln, err := net.Listen("tcp", ":9999")
