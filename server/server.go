@@ -49,7 +49,25 @@ func bytesParse(b []byte) (string, string, string, []byte) {
 	return cmd, channel, args, content
 }
 
-func (s *server) subscribe(c net.Conn, cName string, arg string) {}
+func (s *server) subscribe(c net.Conn, cName string, arg string) {
+	chann, ok := s.channels[cName]
+	if !ok {
+		chann = &channel{
+			name:    cName,
+			members: map[string]net.Conn{c.RemoteAddr().String(): c},
+		}
+		s.channels[cName] = chann
+	}
+
+	chann.members[c.RemoteAddr().String()] = c
+
+	if arg != "" {
+		s.quitCurrentChannel(arg, c)
+	}
+
+	chann.messageBroadcast(c, fmt.Sprintf("New client has joined the channel"), s)
+	s.msg(fmt.Sprintf("Welcome to %s", chann.name), c)
+}
 
 func (s *server) listChannels(c net.Conn) {
 	var channels []string
@@ -60,10 +78,19 @@ func (s *server) listChannels(c net.Conn) {
 	s.msg(fmt.Sprintf("Available channels are: %s", strings.Join(channels, ", ")), c)
 }
 
-func (s *server) send(c net.Conn, chann string, arg string, cont []byte) {}
+func (s *server) send(c net.Conn, cName string, arg string, cont []byte) {
+	channel, ok := s.channels[cName]
+	if !ok {
+		s.msg("You must join the room first", c)
+		return
+	}
+
+	channel.fileBroadcast(c, arg, cont, s)
+}
 
 func (s *server) quit(c net.Conn, arg string) {
 	log.Printf("Client has disconnected: %s", c.RemoteAddr().String())
+	s.quitCurrentChannel(arg, c)
 
 	go s.msg("Sad to see you go :(", c)
 	c.Close()
@@ -102,6 +129,14 @@ func (s *server) sendChannels(responseByte []byte, c net.Conn) {
 	}
 }
 
+func (s *server) quitCurrentChannel(channelName string, c net.Conn) {
+	channel := s.channels[channelName]
+	if channel != nil {
+		delete(channel.members, c.RemoteAddr().String())
+		channel.messageBroadcast(c, fmt.Sprintf("A client has left the channel %s", channelName), s)
+	}
+}
+
 func main() {
 	ln, err := net.Listen("tcp", ":9999")
 	if err != nil {
@@ -123,6 +158,7 @@ func main() {
 		}
 
 		log.Printf("New client has connected: %s", connection.RemoteAddr().String())
+		s.msg(fmt.Sprintf("Welcome to the server client: %s", connection.RemoteAddr().String()), connection)
 		go s.handleConnection(connection)
 	}
 }
