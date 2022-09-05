@@ -52,13 +52,41 @@ func (c *client) handleInput() {
 	}
 }
 
-func (c *client) buildSubscribePayload(arguments []string) []byte { return nil }
+func (c *client) buildSubscribePayload(arguments []string) []byte {
+	commBytes := make([]byte, 16)
+	copy(commBytes, "subscribe")
 
-func buildChannelsPayload() []byte { return nil }
+	clientChannel := []string{strings.Join(arguments[1:], "-")}
+	channelBytes := make([]byte, 32)
+	copy(channelBytes, clientChannel[0])
+
+	requestByte := append(commBytes, channelBytes...)
+
+	if c.channel != "" {
+		oldChannelNameBytes := make([]byte, 64)
+		copy(oldChannelNameBytes, c.channel)
+		requestByte = append(requestByte, oldChannelNameBytes...)
+	}
+	c.channel = clientChannel[0]
+
+	return requestByte
+}
+
+func buildChannelsPayload() []byte {
+	commBytes := make([]byte, 16)
+	copy(commBytes, "channels")
+
+	return commBytes
+}
 
 func (c *client) buildSendPayload(arguments []string) []byte { return nil }
 
-func buildQuitPayload() []byte { return nil }
+func buildQuitPayload() []byte {
+	commBytes := make([]byte, 16)
+	copy(commBytes, "quit")
+
+	return commBytes
+}
 
 func (c *client) request(request []byte) {
 	if request != nil && len(request) > 0 {
