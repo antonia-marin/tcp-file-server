@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -141,6 +142,50 @@ func readFile(filePath string) []byte {
 	return requestBytes
 }
 
+func handleResponse(conn net.Conn) {
+	for {
+		b := make([]byte, 30112)
+		_, err := conn.Read(b)
+		if err != nil {
+			log.Fatalf("Unable accept the request: %s", err.Error())
+			return
+		}
+
+		typeCont, fileName, content := bytesParse(b)
+		switch typeCont {
+		case "message":
+			msg(content)
+		case "file":
+			file(fileName, content)
+		}
+	}
+}
+
+func bytesParse(b []byte) (string, string, []byte) {
+	typeN := bytes.Index(b[:16], []byte{0})
+	fileN := bytes.Index(b[16:80], []byte{0})
+
+	typeCont := string(b[:typeN])
+	fileName := string(b[16:80][:fileN])
+	content := b[80:]
+
+	return typeCont, fileName, content
+}
+
+func msg(msg []byte) {
+	fmt.Printf("> %s \n", string(msg))
+}
+
+func file(fileName string, cont []byte) {
+	file, err := os.Create(fileName)
+	if err != nil {
+		fmt.Printf("OS. Create() function execution error, error is:% v \n", err)
+		return
+	}
+
+	file.Write(cont)
+}
+
 func main() {
 	conn, err := net.Dial("tcp", ":9999")
 
@@ -153,5 +198,6 @@ func main() {
 		conn: conn,
 	}
 
+	go handleResponse(conn)
 	c.handleInput()
 }
