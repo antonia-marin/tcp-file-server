@@ -105,9 +105,9 @@ func buildQuitPayload() []byte {
 	return commBytes
 }
 
-func (c *client) request(request []byte) {
-	if request != nil && len(request) > 0 {
-		c.conn.Write(request)
+func (c *client) request(req []byte) {
+	if req != nil && len(req) > 0 {
+		c.conn.Write(req)
 	}
 }
 
@@ -172,18 +172,18 @@ func bytesParse(b []byte) (string, string, []byte) {
 	return typeCont, fileName, content
 }
 
-func msg(msg []byte) {
-	fmt.Printf("> %s \n", string(msg))
+func msg(msgContent []byte) {
+	fmt.Printf("> %s \n", string(msgContent))
 }
 
 func file(fileName string, cont []byte) {
-	file, err := os.Create(fileName)
+	newFile, err := os.Create(fileName)
 	if err != nil {
 		fmt.Printf("Error: OS. Create() function execution error %s \n", err.Error())
 		return
 	}
 
-	file.Write(cont)
+	newFile.Write(cont)
 }
 
 func main() {
