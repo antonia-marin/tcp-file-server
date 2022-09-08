@@ -89,14 +89,14 @@ func (s *server) send(c net.Conn, cName string, arg string, cont []byte) {
 }
 
 func (s *server) quit(c net.Conn, arg string) {
-	log.Printf("Client has disconnected: %s", c.RemoteAddr().String())
 	s.quitCurrentChannel(arg, c)
+	s.msg("Sad to see you go :(", c)
 
-	go s.msg("Sad to see you go :(", c)
+	log.Printf("Client has disconnected: %s", c.RemoteAddr().String())
 	c.Close()
 }
 
-func (s *server) msg(msg string, c net.Conn) {
+func (s *server) msg(msgContent string, c net.Conn) {
 	contenTypeBytes := make([]byte, 16)
 	copy(contenTypeBytes, "message")
 
@@ -104,7 +104,7 @@ func (s *server) msg(msg string, c net.Conn) {
 	requestByte := append(contenTypeBytes, extByte...)
 
 	msgBytes := make([]byte, 2048)
-	copy(msgBytes, msg)
+	copy(msgBytes, msgContent)
 	requestByte = append(requestByte, msgBytes...)
 
 	s.sendChannels(requestByte, c)
