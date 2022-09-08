@@ -21,7 +21,7 @@ func readInput() ([]string, *string) {
 	line, err := reader.ReadString('\n')
 
 	if err != nil {
-		log.Fatalf("Error: %s", err.Error())
+		fmt.Printf("Error: %s", err.Error())
 		return nil, nil
 	}
 
@@ -105,16 +105,16 @@ func buildQuitPayload() []byte {
 	return commBytes
 }
 
-func (c *client) request(request []byte) {
-	if request != nil && len(request) > 0 {
-		c.conn.Write(request)
+func (c *client) request(req []byte) {
+	if req != nil && len(req) > 0 {
+		c.conn.Write(req)
 	}
 }
 
 func readFile(filePath string) []byte {
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		fmt.Printf("OS. Stat() function execution error, error is:% v \n", err)
+		fmt.Printf("Error: OS. Stat() function execution error %s \n", err.Error())
 		return nil
 	}
 
@@ -123,7 +123,7 @@ func readFile(filePath string) []byte {
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Printf("OS. Open() function execution error, error is:% v \n", err)
+		fmt.Printf("Error: OS. Open() function execution error %s \n", err.Error())
 		return nil
 	}
 
@@ -133,7 +133,7 @@ func readFile(filePath string) []byte {
 	n, err := file.Read(fileBytes)
 	if err != nil {
 		if err != io.EOF {
-			fmt.Printf("file. Read() method execution error, error is:% v \n", err)
+			fmt.Printf("Error: file. Read() method execution error %s \n", err.Error())
 		}
 		return nil
 	}
@@ -147,7 +147,7 @@ func handleResponse(conn net.Conn) {
 		b := make([]byte, 30112)
 		_, err := conn.Read(b)
 		if err != nil {
-			log.Fatalf("Unable accept the request: %s", err.Error())
+			log.Fatalf("Error: Unable accept the request %s", err.Error())
 			return
 		}
 
@@ -172,25 +172,25 @@ func bytesParse(b []byte) (string, string, []byte) {
 	return typeCont, fileName, content
 }
 
-func msg(msg []byte) {
-	fmt.Printf("> %s \n", string(msg))
+func msg(msgContent []byte) {
+	fmt.Printf("> %s \n", string(msgContent))
 }
 
 func file(fileName string, cont []byte) {
-	file, err := os.Create(fileName)
+	newFile, err := os.Create(fileName)
 	if err != nil {
-		fmt.Printf("OS. Create() function execution error, error is:% v \n", err)
+		fmt.Printf("Error: OS. Create() function execution error %s \n", err.Error())
 		return
 	}
 
-	file.Write(cont)
+	newFile.Write(cont)
 }
 
 func main() {
 	conn, err := net.Dial("tcp", ":9999")
 
 	if err != nil {
-		log.Fatalf("Unable to connect with the server: %s", err.Error())
+		log.Fatalf("Error: Unable to connect with the server %s", err.Error())
 		return
 	}
 
