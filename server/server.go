@@ -125,7 +125,7 @@ func (s *server) file(fileN string, cont []byte, c net.Conn) {
 func (s *server) sendChannels(responseByte []byte, c net.Conn) {
 	_, err := c.Write(responseByte)
 	if err != nil {
-		fmt.Println("Server: failed to send content to client!")
+		log.Printf("Error server: failed to send content to client!")
 	}
 }
 
@@ -140,7 +140,7 @@ func (s *server) quitCurrentChannel(channelName string, c net.Conn) {
 func main() {
 	ln, err := net.Listen("tcp", ":9999")
 	if err != nil {
-		log.Fatalf("Unable to start server: %s", err.Error())
+		log.Fatalf("Error: Unable to start server %s", err.Error())
 	}
 
 	defer ln.Close()
@@ -153,7 +153,7 @@ func main() {
 		connection, err := ln.Accept()
 
 		if err != nil {
-			log.Printf("Unable accept connection: %s", err.Error())
+			log.Printf("Error: Unable accept connection %s", err.Error())
 			continue
 		}
 
