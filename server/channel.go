@@ -22,3 +22,12 @@ func (chann *channel) fileBroadcast(conn net.Conn, fileN string, cont []byte, s 
 		}
 	}
 }
+
+func (chann *channel) channMembers() []string {
+	var channelMembers []string
+	for addr, _ := range chann.members {
+		channelMembers = append(channelMembers, addr)
+	}
+
+	return channelMembers
+}

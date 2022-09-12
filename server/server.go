@@ -1,27 +1,39 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
+	"reflect"
 	"strings"
+
+	"github.com/gorilla/websocket"
 )
 
 type server struct {
 	channels map[string]*channel
+	clients  map[string]net.Conn
+	files    map[string][]string
+}
+
+type Statistics struct {
+	Clients           []string            `json:"clients"`
+	Channels          []string            `json:"channels"`
+	ClientsOnChannels map[string][]string `json:"clientsOnChannels"`
+	Files             map[string][]string `json:"files"`
 }
 
 func (s *server) handleConnection(conn net.Conn) {
 	for {
-		b := make([]byte, 30112)
+		b := make([]byte, 60112)
 		_, err := conn.Read(b)
 		if err != nil {
 			log.Printf("Unable accept the request: %s", err.Error())
 			return
 		}
 
-		cmd, chann, arg, cont := bytesParse(b)
+		cmd, chann, arg, cont := BytesParse(b)
 
 		switch cmd {
 		case "subscribe":
@@ -31,22 +43,9 @@ func (s *server) handleConnection(conn net.Conn) {
 		case "send":
 			s.send(conn, chann, arg, cont)
 		case "quit":
-			s.quit(conn, arg)
+			s.quit(conn, chann)
 		}
 	}
-}
-
-func bytesParse(b []byte) (string, string, string, []byte) {
-	cmdN := bytes.Index(b[:16], []byte{0})
-	channN := bytes.Index(b[16:48], []byte{0})
-	argsN := bytes.Index(b[48:112], []byte{0})
-
-	cmd := string(b[:cmdN])
-	channel := string(b[16:48][:channN])
-	args := string(b[48:112][:argsN])
-	content := b[112:]
-
-	return cmd, channel, args, content
 }
 
 func (s *server) subscribe(c net.Conn, cName string, arg string) {
@@ -86,13 +85,15 @@ func (s *server) send(c net.Conn, cName string, arg string, cont []byte) {
 	}
 
 	channel.fileBroadcast(c, arg, cont, s)
+	s.files[c.RemoteAddr().String()] = append(s.files[c.RemoteAddr().String()], arg)
 }
 
-func (s *server) quit(c net.Conn, arg string) {
-	s.quitCurrentChannel(arg, c)
+func (s *server) quit(c net.Conn, cName string) {
+	s.quitCurrentChannel(cName, c)
 	s.msg("Sad to see you go :(", c)
 
 	log.Printf("Client has disconnected: %s", c.RemoteAddr().String())
+	delete(s.clients, c.RemoteAddr().String())
 	c.Close()
 }
 
@@ -137,6 +138,83 @@ func (s *server) quitCurrentChannel(channelName string, c net.Conn) {
 	}
 }
 
+func (s *server) handleUIConnection(w http.ResponseWriter, r *http.Request) {
+	var upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
+
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Error WS Upgrader: %v", err)
+	}
+
+	defer ws.Close()
+
+	for {
+		var msg string
+		errRead := ws.ReadJSON(&msg)
+		if errRead != nil {
+			log.Printf("Error WS on ReadJSON: %v", errRead)
+			break
+		}
+
+		stat := &Statistics{
+			Clients:           s.serverClients(),
+			Channels:          s.serverChannels(),
+			ClientsOnChannels: buildMapClientsOnChannels(s.channels),
+			Files:             s.files,
+		}
+
+		errWrite := ws.WriteJSON(stat)
+		if errWrite != nil {
+			log.Printf("Error WS on WriteJSON: %v", errWrite)
+			ws.Close()
+		}
+	}
+}
+
+func (s *server) serverUI() {
+	http.HandleFunc("/ws", s.handleUIConnection)
+	err2 := http.ListenAndServe("localhost:8080", nil)
+	if err2 != nil {
+		log.Fatal("ListenAndServe: ", err2)
+	}
+}
+
+func (s *server) serverClients() []string {
+	clients := s.clients
+	var keys []string
+	for k := range clients {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
+
+func (s *server) serverChannels() []string {
+	channels := s.channels
+	var keys []string
+	for k := range channels {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
+
+func buildMapClientsOnChannels(serverChannels map[string]*channel) map[string][]string {
+	clientsOnChannels := make(map[string][]string)
+	keysChannels := reflect.ValueOf(serverChannels).MapKeys()
+	for _, ss := range keysChannels {
+		channel, _ := serverChannels[ss.String()]
+		chanMem := channel.channMembers()
+		clientsOnChannels[ss.String()] = chanMem
+	}
+
+	return clientsOnChannels
+}
+
 func main() {
 	ln, err := net.Listen("tcp", ":9999")
 	if err != nil {
@@ -147,11 +225,14 @@ func main() {
 
 	s := &server{
 		channels: make(map[string]*channel),
+		clients:  make(map[string]net.Conn),
+		files:    make(map[string][]string),
 	}
+
+	go s.serverUI()
 
 	for {
 		connection, err := ln.Accept()
-
 		if err != nil {
 			log.Printf("Error: Unable accept connection %s", err.Error())
 			continue
@@ -159,6 +240,7 @@ func main() {
 
 		log.Printf("New client has connected: %s", connection.RemoteAddr().String())
 		s.msg(fmt.Sprintf("Welcome to the server client: %s", connection.RemoteAddr().String()), connection)
+		s.clients[connection.RemoteAddr().String()] = connection
 		go s.handleConnection(connection)
 	}
 }
