@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>File server chat</title>
+    </head>
+    <body>
+        <div id="app">
+            <nav class="navbar mb-3" style="background-color: #e3f2fd;">
+              <div class="container-fluid">
+                <span class="navbar-brand mb-0 h1 mx-auto">File server chat</span>
+              </div>
+            </nav>
+            <div class="container text-center">
+              <div class="row mb-3">
+                <div class="col">
+                    <div class="card" style="width: 18rem;">
+                      <div class="card-body">
+                        <h5 class="card-title">Clients on server</h5>
+                        <p class="card-text">
+                          <li v-for="(value, index) in clients" :key="`client-${index}`">
+                            {{ value }}
+                          </li>
+                        </p>
+                      </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card" style="width: 18rem;">
+                      <div class="card-body">
+                        <h5 class="card-title">Server Channels</h5>
+                          <p class="card-text">
+                            <li v-for="(value, index) in channels" :key="`channel-${index}`">
+                              {{ value }}
+                            </li>
+                          </p>
+                      </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card" style="width: 18rem;">
+                      <div class="card-body">
+                        <h5 class="card-title">Clients on channels</h5>
+                        <p class="card-text">
+                          <li v-for="(value, key) in clientsOnChannels" :key="`clientsOnChannel-${key}`">
+                              {{key}}: {{value}}
+                           </li>
+                        </p>
+                      </div>
+                    </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col">
+                  <div class="card">
+                    <div class="card-body">
+                      <h5 class="card-title">Sender clients</h5>
+                      <p class="card-text">
+                        <li v-for="(value, key) in files" :key="`file-${key}`">
+                          {{key}}: {{value}}
+                        </li>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+        </div>
+        <!--VUEJS CDN-->
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        <!-- CSS only -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
+        <script src="main.js" charset="utf-8"></script>
+    </body>
+</html>
