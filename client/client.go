@@ -45,7 +45,7 @@ func (c *client) handleInput() {
 		case "/send":
 			bytesRequest = c.buildSendPayload(args)
 		case "/quit":
-			bytesRequest = buildQuitPayload()
+			bytesRequest = c.buildQuitPayload()
 		default:
 			fmt.Println("Error Command not found: ", *cmd)
 		}
@@ -98,11 +98,16 @@ func (c *client) buildSendPayload(arguments []string) []byte {
 	return requestBytes
 }
 
-func buildQuitPayload() []byte {
+func (c *client) buildQuitPayload() []byte {
 	commBytes := make([]byte, 16)
 	copy(commBytes, "quit")
 
-	return commBytes
+	channelBytes := make([]byte, 32)
+	copy(channelBytes, c.channel)
+
+	requestBytes := append(commBytes, channelBytes...)
+
+	return requestBytes
 }
 
 func (c *client) request(req []byte) {
