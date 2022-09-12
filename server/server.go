@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -27,14 +26,14 @@ type Statistics struct {
 
 func (s *server) handleConnection(conn net.Conn) {
 	for {
-		b := make([]byte, 30112)
+		b := make([]byte, 60112)
 		_, err := conn.Read(b)
 		if err != nil {
 			log.Printf("Unable accept the request: %s", err.Error())
 			return
 		}
 
-		cmd, chann, arg, cont := bytesParse(b)
+		cmd, chann, arg, cont := BytesParse(b)
 
 		switch cmd {
 		case "subscribe":
@@ -47,19 +46,6 @@ func (s *server) handleConnection(conn net.Conn) {
 			s.quit(conn, chann)
 		}
 	}
-}
-
-func bytesParse(b []byte) (string, string, string, []byte) {
-	cmdN := bytes.Index(b[:16], []byte{0})
-	channN := bytes.Index(b[16:48], []byte{0})
-	argsN := bytes.Index(b[48:112], []byte{0})
-
-	cmd := string(b[:cmdN])
-	channel := string(b[16:48][:channN])
-	args := string(b[48:112][:argsN])
-	content := b[112:]
-
-	return cmd, channel, args, content
 }
 
 func (s *server) subscribe(c net.Conn, cName string, arg string) {
@@ -177,7 +163,7 @@ func (s *server) handleUIConnection(w http.ResponseWriter, r *http.Request) {
 		stat := &Statistics{
 			Clients:           s.serverClients(),
 			Channels:          s.serverChannels(),
-			ClientsOnChannels: buildMapClientsonChannels(s.channels),
+			ClientsOnChannels: buildMapClientsOnChannels(s.channels),
 			Files:             s.files,
 		}
 
@@ -217,7 +203,7 @@ func (s *server) serverChannels() []string {
 	return keys
 }
 
-func buildMapClientsonChannels(serverChannels map[string]*channel) map[string][]string {
+func buildMapClientsOnChannels(serverChannels map[string]*channel) map[string][]string {
 	clientsOnChannels := make(map[string][]string)
 	keysChannels := reflect.ValueOf(serverChannels).MapKeys()
 	for _, ss := range keysChannels {
